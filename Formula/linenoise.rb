@@ -1,7 +1,8 @@
 class Linenoise < Formula
   desc "Small self-contained alternative to readline and libedit"
   homepage "https://github.com/antirez/linenoise"
-  url "https://github.com/antirez/linenoise/archive/refs/heads/master.tar.gz"
+  url "https://github.com/antirez/linenoise/archive/97e3ebb18d15624e3b5e7b9d5b376839cafc5a09.tar.gz"
+  version "0.0.1" # Pseudo-version since no official releases
   sha256 "f49dc120a7d66a29969e9ed23dc34b4a50692e894d37b855caea1a698d013886"
   license "BSD-2-Clause"
 
@@ -27,3 +28,5 @@ class Linenoise < Formula
     system "./test"
   end
 end
+
+
