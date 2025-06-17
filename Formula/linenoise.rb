@@ -3,7 +3,7 @@ class Linenoise < Formula
   homepage "https://github.com/antirez/linenoise"
   url "https://github.com/antirez/linenoise/archive/d895173d679be70bcd8b23041fff3e458e1a3506.tar.gz"
   version "0.0.1" # Pseudo-version since no official releases
-  sha256 "f49dc120a7d66a29969e9ed23dc34b4a50692e894d37b855caea1a698d013886"
+  sha256 "839ed407fe0dfa5fd7dd103abfc695dee72fea2840df8d4250ad42b0e64839e8"
   license "BSD-2-Clause"
 
   def install
