@@ -24,6 +24,7 @@ class Rbus < Formula
       -DWITH_SPAKE2=OFF
       -DMSG_ROUNDTRIP_TIME=OFF
       -DENABLE_UNIT_TESTING=OFF
+      -DCMAKE_POLICY_VERSION_MINIMUM=3.5
     ]
     mkdir "build" do
       system "cmake", "..", *args
