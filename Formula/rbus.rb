@@ -33,15 +33,43 @@ class Rbus < Formula
      end
      # Create log and run directories
      (var/"run/rbus").mkpath
+ 
+     # Install wrapper script for rtrouted
+     wrapper = <<~EOS
+       #!/bin/bash
+       PID_FILE="#{var}/run/rbus/rtrouted.pid"
+ 
+       # Ensure clean PID file
+       rm -f "$PID_FILE"
+ 
+       # Start rtrouted in the background
+       #{opt_bin}/rtrouted -f "$@" &
+       PID=$!
+ 
+       # Write PID to file
+       echo $PID > "$PID_FILE"
+ 
+       # Trap signals to ensure proper cleanup
+       trap 'kill -TERM $PID; wait $PID; rm -f "$PID_FILE"; exit 0' TERM INT
+ 
+       # Wait for the process to exit
+       wait $PID
+ 
+       # Clean up PID file
+       rm -f "$PID_FILE"
+       rm -f "/tmp/rtrouted*"
+     EOS
+     (bin/"rtrouted-wrapper").write wrapper
+     (bin/"rtrouted-wrapper").chmod 0755
    end
  
    service do
-     run [opt_bin/"rtrouted"]
+     run [opt_bin/"rtrouted-wrapper"]
      run_type :immediate
      keep_alive false
+     log_path var/"log/rbus/rtrouted.log"
+     error_log_path var/"log/rbus/rtrouted.err"
      process_type :background
-     # Add PID file to track the daemon process
-     pid_file var/"run/rbus/rtrouted.pid"
    end
  
    def caveats
@@ -49,13 +77,7 @@ class Rbus < Formula
        To start rbus now and restart at login:
          brew services start rbus
        Or, if you don't want/need a background service, you can run:
-         #{opt_bin}/rtrouted
-  
-       PID file is written to:
-         #{var}/run/rbus/rtrouted.pid
- 
-       If the service fails to stop properly, you can manually terminate it with:
-         kill -TERM $(cat #{var}/run/rbus/rtrouted.pid)
+         #{opt_bin}/rtrouted 
      EOS
    end
  
