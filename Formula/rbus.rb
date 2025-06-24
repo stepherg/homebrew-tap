@@ -1,9 +1,9 @@
 class Rbus < Formula
   desc "RDK-Bus (RBUS) messaging framework"
   homepage "https://github.com/rdkcentral/rbus"
-  url "https://github.com/stepherg/rbus/archive/6cdba0a03ec26cb551786234742ebdff233abe0f.tar.gz"
-  version "2.3.0" # Matches CMakeLists.txt
-  sha256 "6cb3970efa4b2b546b0af1aea15ceca4c6d5e795f1a7f168612f7b81dd6114fe"
+  url "https://github.com/stepherg/rbus/archive/47c405dc4aea747a7af1e568586420e8aa5510dd.tar.gz"
+  version "2.3.1"
+  sha256 "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
   license "Apache-2.0"
 
   depends_on "cmake" => :build
