@@ -38,7 +38,6 @@ class Rbus < Formula
     wrapper = <<~EOS
       #!/bin/bash
       PID_FILE="#{var}/run/rbus/rtrouted.pid"
-      rm -f "$PID_FILE"
       #{opt_bin}/rtrouted "$@" &
       PID=$!
       echo $PID > "$PID_FILE"
