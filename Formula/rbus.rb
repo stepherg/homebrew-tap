@@ -31,6 +31,67 @@ class Rbus < Formula
        system "make"
        system "make", "install"
      end
+ 
+     # Install start wrapper script
+     wrapper = <<~EOS
+      #!/bin/bash
+
+      #{opt_bin}/rtrouted
+ 
+     EOS
+     (bin/"rtrouted-start").write start
+     (bin/"rtrouted-start").chmod 0755
+ 
+     # Install stop script
+     stop = <<~EOS
+      #!/bin/bash
+ 
+      PID=$(/usr/bin/pgrep rtrouted)
+  
+      if [[ -z "$PID" ]]; then
+         rm -f "/tmp/rtrouted"
+         exit 0
+      fi
+
+      # Check if process is running
+      if ! ps -p "$PID" > /dev/null; then
+         rm -f "/tmp/rtrouted*"
+         exit 0
+      fi
+ 
+      # Send SIGTERM to rtrouted
+      echo "Stopping rtrouted (PID $PID)..."
+      kill -TERM "$PID"
+ 
+      # Wait for process to exit (up to 10 seconds)
+      for i in {1..10}; do
+         if ! ps -p "$PID" > /dev/null; then
+            echo "rtrouted stopped."
+            rm -f "/tmp/rtrouted*"
+            exit 0
+         fi
+         sleep 1
+      done
+ 
+      # If still running, try SIGKILL
+      echo "rtrouted did not stop with SIGTERM, sending SIGKILL..."
+      kill -KILL "$PID" 2>/dev/null
+      rm -f "/tmp/rtrouted*"
+      echo "rtrouted forcefully stopped."
+      exit 0
+     EOS
+     (bin/"rtrouted-stop").write stop
+     (bin/"rtrouted-stop").chmod 0755 
+   end
+ 
+   def caveats
+     <<~EOS
+      To start rbus:
+         #{opt_bin}/rtrouted-start
+ 
+      To stop rbus:
+         #{opt_bin}/rtrouted-stop 
+     EOS
    end
  
    test do
@@ -38,4 +99,3 @@ class Rbus < Formula
      system "#{bin}/rbuscli", "--version"
    end
  end
- 
