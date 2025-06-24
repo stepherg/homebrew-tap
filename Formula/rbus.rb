@@ -12,57 +12,65 @@ class Rbus < Formula
    depends_on "stepherg/tap/linenoise"
  
    def install
-     # Configure CMake with Homebrew dependencies
-     args = std_cmake_args + %W[
-       -DBUILD_FOR_DESKTOP=OFF
-       -DBUILD_RBUS_DAEMON=ON
-       -DBUILD_RBUS_SAMPLE_APPS=OFF
-       -DBUILD_RBUS_TEST_APPS=OFF
-       -DBUILD_ONLY_RTMESSAGE=OFF
-       -DENABLE_RDKLOGGER=OFF
-       -DRDKC_BUILD=OFF
-       -DWITH_SPAKE2=OFF
-       -DMSG_ROUNDTRIP_TIME=OFF
-       -DENABLE_UNIT_TESTING=OFF
-       -DCMAKE_POLICY_VERSION_MINIMUM=3.5
-     ]
-     mkdir "build" do
-       system "cmake", "..", *args
-       system "make"
-       system "make", "install"
-     end
-     # Create run directory
-     (var/"run/rbus").mkpath
- 
-     # Install wrapper script for rtrouted
-     wrapper = <<~EOS
-       #!/bin/bash
-       PID_FILE="#{var}/run/rbus/rtrouted.pid"
- 
-       # Ensure clean PID file
-       rm -f "$PID_FILE"
- 
-       # Start rtrouted in the background
-       #{opt_bin}/rtrouted &
-       PID=$!
- 
-       # Write PID to file
-       echo $PID > "$PID_FILE"
- 
-       # Trap signals to ensure proper cleanup
-       trap 'kill -TERM $PID; wait $PID; rm -f "$PID_FILE"; exit 0' TERM INT
- 
-       # Wait for the process to exit
-       wait $PID
- 
-       # Clean up PID file
-       rm -f "$PID_FILE"
-       rm -f "/tmp/rtrouted*"
-     EOS
-     (bin/"rtrouted-wrapper").write wrapper
-     (bin/"rtrouted-wrapper").chmod 0755
-   end
- 
+      # Configure CMake with Homebrew dependencies
+      args = std_cmake_args + %W[
+        -DBUILD_FOR_DESKTOP=OFF
+        -DBUILD_RBUS_DAEMON=ON
+        -DBUILD_RBUS_SAMPLE_APPS=OFF
+        -DBUILD_RBUS_TEST_APPS=OFF
+        -DBUILD_ONLY_RTMESSAGE=OFF
+        -DENABLE_RDKLOGGER=OFF
+        -DRDKC_BUILD=OFF
+        -DWITH_SPAKE2=OFF
+        -DMSG_ROUNDTRIP_TIME=OFF
+        -DENABLE_UNIT_TESTING=OFF
+        -DCMAKE_POLICY_VERSION_MINIMUM=3.5
+      ]
+      mkdir "build" do
+        system "cmake", "..", *args
+        system "make"
+        system "make", "install"
+      end
+      # Create run directory
+    (var/"run/rbus").mkpath
+  
+    # Install wrapper script (as above)
+    wrapper = <<~EOS
+      #!/bin/bash
+      PID_FILE="#{var}/run/rbus/rtrouted.pid"
+      rm -f "$PID_FILE"
+      #{opt_bin}/rtrouted "$@" &
+      PID=$!
+      echo $PID > "$PID_FILE"
+      trap 'kill -TERM $PID; wait $PID; rm -f "$PID_FILE"; exit 0' TERM INT
+      wait $PID
+      rm -f "$PID_FILE"
+    EOS
+    (bin/"rtrouted-wrapper").write wrapper
+    (bin/"rtrouted-wrapper").chmod 0755
+  
+    # Install custom plist
+    plist = <<~EOS
+      <?xml version="1.0" encoding="UTF-8"?>
+      <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+      <plist version="1.0">
+      <dict>
+        <key>Label</key>
+        <string>homebrew.mxcl.rbus</string>
+        <key>ProgramArguments</key>
+        <array>
+          <string>#{opt_bin}/rtrouted-wrapper</string>
+        </array>
+        <key>RunAtLoad</key>
+        <true/>
+        <key>KeepAlive</key>
+        <false/>
+      </dict>
+      </plist>
+    EOS
+    (prefix/"etc").install_symlink plist => "homebrew.mxcl.rbus.plist"
+  end
+
    service do
      run [opt_bin/"rtrouted-wrapper"]
      run_type :immediate
@@ -84,3 +92,4 @@ class Rbus < Formula
      system "#{bin}/rbuscli", "--version"
    end
  end
+ 
