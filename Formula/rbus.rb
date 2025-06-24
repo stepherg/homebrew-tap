@@ -32,6 +32,7 @@ class Rbus < Formula
        system "make", "install"
      end
      # Create log and run directories
+     (var/"log/rbus").mkpath
      (var/"run/rbus").mkpath
  
      # Install control script
@@ -59,9 +60,28 @@ class Rbus < Formula
      # Install start wrapper script
      wrapper = <<~EOS
        #!/bin/bash
-       # Start rtrouted
-       #{opt_bin}/rtrouted
-   
+       PID_FILE="#{var}/run/rbus/rtrouted.pid"
+       LOG_FILE="#{var}/log/rbus/rtrouted.log"
+       ERR_FILE="#{var}/log/rbus/rtrouted.err"
+ 
+       # Ensure clean PID file
+       rm -f "$PID_FILE"
+ 
+       # Start rtrouted in the background
+       #{opt_bin}/rtrouted "$@" >> "$LOG_FILE" 2>> "$ERR_FILE" &
+       PID=$!
+ 
+       # Write PID to file
+       echo $PID > "$PID_FILE"
+ 
+       # Trap signals to ensure proper cleanup
+       trap 'kill -TERM $PID; wait $PID; rm -f "$PID_FILE"; exit 0' TERM INT
+ 
+       # Wait for the process to exit
+       wait $PID
+ 
+       # Clean up PID file
+       rm -f "$PID_FILE"
      EOS
      (bin/"rtrouted-wrapper").write wrapper
      (bin/"rtrouted-wrapper").chmod 0755
@@ -69,30 +89,48 @@ class Rbus < Formula
      # Install stop script
      stop = <<~EOS
        #!/bin/bash
-
-       PID=$(/usr/bin/pgrep rtrouted)
-  
+       PID_FILE="#{var}/run/rbus/rtrouted.pid"
+       LOG_FILE="#{var}/log/rbus/rtrouted.log"
+       ERR_FILE="#{var}/log/rbus/rtrouted.err"
+ 
+       if [ ! -f "$PID_FILE" ]; then
+         echo "No PID file found at $PID_FILE. Is rtrouted running?" >> "$ERR_FILE"
+         exit 0
+       fi
+ 
+       PID=$(cat "$PID_FILE")
+       if [ -z "$PID" ]; then
+         echo "PID file $PID_FILE is empty." >> "$ERR_FILE"
+         rm -f "$PID_FILE"
+         exit 0
+       fi
+ 
        # Check if process is running
        if ! ps -p "$PID" > /dev/null; then
-         rm -f "/tmp/rtrouted*"
+         echo "Process $PID not running. Cleaning up PID file." >> "$ERR_FILE"
+         rm -f "$PID_FILE"
          exit 0
        fi
  
        # Send SIGTERM to rtrouted
+       echo "Stopping rtrouted (PID $PID)..." >> "$LOG_FILE"
        kill -TERM "$PID"
  
        # Wait for process to exit (up to 10 seconds)
        for i in {1..10}; do
          if ! ps -p "$PID" > /dev/null; then
-            rm -f "/tmp/rtrouted*"
-            exit 0
+           echo "rtrouted stopped." >> "$LOG_FILE"
+           rm -f "$PID_FILE"
+           exit 0
          fi
          sleep 1
        done
  
        # If still running, try SIGKILL
+       echo "rtrouted did not stop with SIGTERM, sending SIGKILL..." >> "$ERR_FILE"
        kill -KILL "$PID" 2>/dev/null
-       rm -f "/tmp/rtrouted*"
+       rm -f "$PID_FILE"
+       echo "rtrouted forcefully stopped." >> "$LOG_FILE"
        exit 0
      EOS
      (bin/"rtrouted-stop").write stop
@@ -115,6 +153,10 @@ class Rbus < Formula
          <true/>
          <key>KeepAlive</key>
          <false/>
+         <key>StandardOutPath</key>
+         <string>#{var}/log/rbus/rtrouted.log</string>
+         <key>StandardErrorPath</key>
+         <string>#{var}/log/rbus/rtrouted.err</string>
        </dict>
        </plist>
      EOS
@@ -126,11 +168,26 @@ class Rbus < Formula
        To start rbus now and restart at login:
          brew services start rbus
        Or, if you don't want/need a background service, you can run:
-         #{opt_bin}/rtrouted -f
+         #{opt_bin}/rtrouted
  
        The service uses a control script (#{opt_bin}/rtrouted-control) that dispatches to:
          - #{opt_bin}/rtrouted-wrapper (start)
-         - #{opt_bin}/rtrouted-stop (stop)    
+         - #{opt_bin}/rtrouted-stop (stop)
+ 
+       Optional arguments for rtrouted can be passed to the wrapper script or configured in:
+         #{etc}/rbus/rtrouted.conf
+ 
+       Logs are written to:
+         #{var}/log/rbus/rtrouted.log
+         #{var}/log/rbus/rtrouted.err
+ 
+       PID file is written to:
+         #{var}/run/rbus/rtrouted.pid
+ 
+       If the service fails to stop properly, you can manually run:
+         #{opt_bin}/rtrouted-stop
+       or:
+         kill -TERM $(cat #{var}/run/rbus/rtrouted.pid)
      EOS
    end
  
