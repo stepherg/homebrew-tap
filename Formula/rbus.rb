@@ -31,6 +31,35 @@ class Rbus < Formula
       system "make"
       system "make", "install"
     end
+    # Create log directory
+    (var/"log/rbus").mkpath
+  end
+
+  service do
+    run [opt_bin/"rtrouted"]
+    run_type :immediate
+    keep_alive false
+    log_path var/"log/rbus/rtrouted.log"
+    error_log_path var/"log/rbus/rtrouted.err"
+    process_type :background
+    timeout 300
+  end
+
+  def caveats
+    <<~EOS
+      To start rbus now and restart at login:
+        brew services start rbus
+      Or, if you don't want/need a background service, you can run:
+        #{opt_bin}/rtrouted
+
+      Optional arguments for rtrouted can be configured manually by editing:
+        #{etc}/rbus/rtrouted.conf
+      and passing them via a wrapper script or custom launchd plist.
+
+      Logs are written to:
+        #{var}/log/rbus/rtrouted.log
+        #{var}/log/rbus/rtrouted.err
+    EOS
   end
 
   test do
