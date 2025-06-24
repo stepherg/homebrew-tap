@@ -36,6 +36,13 @@ class Rbus < Formula
      start = <<~EOS
       #!/bin/bash
 
+      PID=$(/usr/bin/pgrep rtrouted)
+  
+      if [[ "$PID" ]]; then
+         echo "rtrouted already running..."
+         exit 0
+      fi
+
       #{opt_bin}/rtrouted
  
      EOS
@@ -55,7 +62,7 @@ class Rbus < Formula
 
       # Check if process is running
       if ! ps -p "$PID" > /dev/null; then
-         rm -f "/tmp/rtrouted*"
+         rm -f "/tmp/rtrouted"
          exit 0
       fi
  
@@ -67,7 +74,7 @@ class Rbus < Formula
       for i in {1..10}; do
          if ! ps -p "$PID" > /dev/null; then
             echo "rtrouted stopped."
-            rm -f "/tmp/rtrouted*"
+            rm -f "/tmp/rtrouted"
             exit 0
          fi
          sleep 1
@@ -76,7 +83,7 @@ class Rbus < Formula
       # If still running, try SIGKILL
       echo "rtrouted did not stop with SIGTERM, sending SIGKILL..."
       kill -KILL "$PID" 2>/dev/null
-      rm -f "/tmp/rtrouted*"
+      rm -f "/tmp/rtrouted"
       echo "rtrouted forcefully stopped."
       exit 0
      EOS
