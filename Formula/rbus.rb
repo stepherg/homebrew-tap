@@ -42,7 +42,6 @@ class Rbus < Formula
     log_path var/"log/rbus/rtrouted.log"
     error_log_path var/"log/rbus/rtrouted.err"
     process_type :background
-    timeout 300
   end
 
   def caveats
