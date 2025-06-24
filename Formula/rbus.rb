@@ -32,8 +32,8 @@ class Rbus < Formula
        system "make", "install"
      end
  
-     # Install start wrapper script
-     wrapper = <<~EOS
+     # Install start script
+     start = <<~EOS
       #!/bin/bash
 
       #{opt_bin}/rtrouted
