@@ -31,7 +31,7 @@ class Rbus < Formula
        system "make"
        system "make", "install"
      end
-     # Create log and run directories
+     # Create run directory
      (var/"run/rbus").mkpath
  
      # Install wrapper script for rtrouted
@@ -43,7 +43,7 @@ class Rbus < Formula
        rm -f "$PID_FILE"
  
        # Start rtrouted in the background
-       #{opt_bin}/rtrouted -f "$@" &
+       #{opt_bin}/rtrouted &
        PID=$!
  
        # Write PID to file
@@ -67,8 +67,6 @@ class Rbus < Formula
      run [opt_bin/"rtrouted-wrapper"]
      run_type :immediate
      keep_alive false
-     log_path var/"log/rbus/rtrouted.log"
-     error_log_path var/"log/rbus/rtrouted.err"
      process_type :background
    end
  
