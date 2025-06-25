@@ -38,6 +38,30 @@ brew install rbus
   rtrouted-stop
   ```
 
+### rbus-datamodels
+
+**Description**: The rbus-datamodels project provides a C-based executable (rbus-datamodels) that exposes data models via the RBus library. It registers data models (e.g., Device.DeviceInfo.SerialNumber, Device.DeviceInfo.MemoryStatus.Total) from a JSON file (datamodels.json) and predefined models. The executable acts as an RBus provider, allowing clients (e.g., rbuscli) to get/set properties and subscribe to events.
+
+**Installation**:
+
+```bash
+brew install rbus-datamodels
+```
+
+**Usage**:
+
+- Start `rbus-datamodels` as a background service:
+
+  ```bash
+  rbus-datamodels-start
+  ```
+
+- Stop the service:
+
+  ```bash
+  rbus-datamodels-stop
+  ```
+
 **Notes**:
 
 ## License
