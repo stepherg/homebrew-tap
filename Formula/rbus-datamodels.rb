@@ -1,9 +1,9 @@
 class RbusDatamodels < Formula
    desc "RBUS-based data model management for device information"
    homepage "https://github.com/stepherg/rbus-datamodels"
-   url "https://github.com/stepherg/rbus-datamodels/archive/refs/tags/v0.0.1.tar.gz"
-   version "0.0.1"
-   sha256 "a7ace6567860df9d0f29775c914a930e7a9f0718c78c3435b49871050c1a16c3"
+   url "https://github.com/stepherg/rbus-datamodels/archive/refs/tags/v0.0.2.tar.gz"
+   version "0.0.2"
+   sha256 "7da626b45b0b61656e47e0b609cd2b6c657089a42d7329b1bb0100d59949935f"
    license "Apache-2.0"
  
    depends_on "cmake" => :build
