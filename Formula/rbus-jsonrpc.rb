@@ -93,4 +93,5 @@ class RbusJsonrpc < Formula
          #{etc}/rbus/config.json
     EOS
   end
+end
 
