@@ -1,4 +1,4 @@
-class RbusDatamodels < Formula
+class RbusElements < Formula
    desc "RBUS-based data model management for device information"
    homepage "https://github.com/stepherg/rbus-elements"
    url "https://github.com/stepherg/rbus-elements/archive/refs/tags/v0.0.1.tar.gz"
