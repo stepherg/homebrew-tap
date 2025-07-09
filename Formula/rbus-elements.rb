@@ -19,10 +19,8 @@ class RbusElements < Formula
   end
 
   def install
-    raise "elements.json not found in source directory" unless File.exist?("elements.json")
     system "cmake", "-S", ".", "-B", "build", *std_cmake_args
     system "cmake", "--build", "build"
-    raise "Build failed: rbus_elements binary not found" unless File.exist?("build/rbus_elements")
     bin.install "build/rbus_elements"
     etc.install "elements.json"
 
