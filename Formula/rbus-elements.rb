@@ -9,7 +9,6 @@ class RbusElements < Formula
   depends_on "cmake" => :build
   depends_on "stepherg/tap/rbus"
   depends_on "cjson"
-  depends_on "coreutils"
 
   def preinstall
     system bin/"rbus-elements-stop" if File.exist?(bin/"rbus-elements-stop")
@@ -30,7 +29,7 @@ class RbusElements < Formula
     # Install start script
     start = <<~EOS
       #!/usr/bin/env bash
-      PIDS=$(#{Formula["coreutils"].opt_bin}/pgrep rbus_elements)
+      PIDS=$(/usr/bin/pgrep rbus_elements)
       if [[ "$PIDS" ]]; then
         echo "rbus_elements already running (PIDs: $PIDS). Please stop existing instances."
         exit 1
@@ -43,7 +42,7 @@ class RbusElements < Formula
     # Install stop script
     stop = <<~EOS
       #!/usr/bin/env bash
-      PIDS=$(#{Formula["coreutils"].opt_bin}/pgrep rbus_elements)
+      PIDS=$(/usr/bin/pgrep rbus_elements)
       if [[ -z "$PIDS" ]]; then
         exit 0
       fi
@@ -100,33 +99,9 @@ class RbusElements < Formula
 
       Before upgrading or uninstalling, ensure rbus_elements is stopped:
         #{opt_bin}/rbus-elements-stop
-      If using the launchd service, unload it first:
-        launchctl unload ~/Library/LaunchAgents/#{plist_name}.plist
 
       If you encounter issues with the stepherg/tap/rbus dependency, ensure the tap is installed:
         brew tap stepherg/tap
-    EOS
-  end
-
-  def plist
-    <<~EOS
-      <?xml version="1.0" encoding="UTF-8"?>
-      <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
-      <plist version="1.0">
-        <dict>
-          <key>Label</key>
-          <string>#{plist_name}</string>
-          <key>ProgramArguments</key>
-          <array>
-            <string>#{opt_bin}/rbus_elements</string>
-            <string>#{etc}/elements.json</string>
-          </array>
-          <key>RunAtLoad</key>
-          <true/>
-          <key>KeepAlive</key>
-          <true/>
-        </dict>
-      </plist>
     EOS
   end
 
