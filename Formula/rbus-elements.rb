@@ -34,7 +34,11 @@ class RbusElements < Formula
         echo "rbus_elements already running (PIDs: $PIDS)."
         exit 1
       fi
-      #{opt_bin}/rbus_elements #{etc}/elements.json &
+
+      LOG_DIR="#{var}/log"
+      mkdir -p "$LOG_DIR"
+      #{opt_bin}/rbus_elements #{etc}/elements.json >> "$LOG_DIR/rbus_elements.log" 2>&1 &
+    
     EOS
     (bin/"rbus-elements-start").write start
     (bin/"rbus-elements-start").chmod 0755
