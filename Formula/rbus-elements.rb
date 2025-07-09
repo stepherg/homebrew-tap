@@ -31,7 +31,7 @@ class RbusElements < Formula
       #!/usr/bin/env bash
       PIDS=$(/usr/bin/pgrep rbus_elements)
       if [[ "$PIDS" ]]; then
-        echo "rbus_elements already running (PIDs: $PIDS). Please stop existing instances."
+        echo "rbus_elements already running (PIDs: $PIDS)."
         exit 1
       fi
       #{opt_bin}/rbus_elements #{etc}/elements.json &
@@ -99,9 +99,6 @@ class RbusElements < Formula
 
       Before upgrading or uninstalling, ensure rbus_elements is stopped:
         #{opt_bin}/rbus-elements-stop
-
-      If you encounter issues with the stepherg/tap/rbus dependency, ensure the tap is installed:
-        brew tap stepherg/tap
     EOS
   end
 
