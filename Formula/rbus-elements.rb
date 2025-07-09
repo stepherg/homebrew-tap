@@ -1,100 +1,158 @@
 class RbusElements < Formula
-   desc "RBUS-based data model management for device information"
-   homepage "https://github.com/stepherg/rbus-elements"
-   url "https://github.com/stepherg/rbus-elements/archive/refs/tags/v0.0.2.tar.gz"
-   version "0.0.2"
-   sha256 "093b2b89c9cab0654e49c7c9c96cf14dc89f140825f2602795e17e3b449953a1"
-   license "Apache-2.0"
- 
-   depends_on "cmake" => :build
-   depends_on "stepherg/tap/rbus"
-   depends_on "cjson"
- 
-   def install
-     system "cmake", "-S", ".", "-B", "build", *std_cmake_args
-     system "cmake", "--build", "build"
-     bin.install "build/rbus_elements"
-     etc.install "elements.json"
+  desc "RBUS-based data model management for device information"
+  homepage "https://github.com/stepherg/rbus-elements"
+  url "https://github.com/stepherg/rbus-elements/archive/refs/tags/v0.0.3.tar.gz"
+  version "0.0.3"
+  sha256 "a164167c921010b2d64bd122bed735349e236ca04e24f9e057d85f5905147f72"
+  license "Apache-2.0"
 
-     # Install start script
-     start = <<~EOS
-      #!/bin/bash
+  depends_on "cmake" => :build
+  depends_on "stepherg/tap/rbus"
+  depends_on "cjson"
+  depends_on "coreutils"
 
-      PID=$(/usr/bin/pgrep rbus_elements)
-  
-      if [[ "$PID" ]]; then
-         echo "rbus_elements already running..."
-         exit 0
+  def preinstall
+    system bin/"rbus-elements-stop" if File.exist?(bin/"rbus-elements-stop")
+  end
+
+  def preremove
+    system bin/"rbus-elements-stop" if File.exist?(bin/"rbus-elements-stop")
+  end
+
+  def install
+    raise "elements.json not found in source directory" unless File.exist?("elements.json")
+    system "cmake", "-S", ".", "-B", "build", *std_cmake_args
+    system "cmake", "--build", "build" or raise "Build failed"
+    raise "Build failed: rbus_elements binary not found" unless File.exist?("build/rbus_elements")
+    bin.install "build/rbus_elements"
+    etc.install "elements.json"
+
+    # Install start script
+    start = <<~EOS
+      #!/usr/bin/env bash
+      PIDS=$(#{Formula["coreutils"].opt_bin}/pgrep rbus_elements)
+      if [[ "$PIDS" ]]; then
+        echo "rbus_elements already running (PIDs: $PIDS). Please stop existing instances."
+        exit 1
       fi
-
       #{opt_bin}/rbus_elements #{etc}/elements.json &
- 
-     EOS
-     (bin/"rbus-elements-start").write start
-     (bin/"rbus-elements-start").chmod 0755
- 
-     # Install stop script
-     stop = <<~EOS
-      #!/bin/bash
- 
-      PID=$(/usr/bin/pgrep rbus_elements)
-  
-      if [[ -z "$PID" ]]; then
-         exit 0
-      fi
+    EOS
+    (bin/"rbus-elements-start").write start
+    (bin/"rbus-elements-start").chmod 0755
 
-      # Check if process is running
-      if ! ps -p "$PID" > /dev/null; then
-         exit 0
+    # Install stop script
+    stop = <<~EOS
+      #!/usr/bin/env bash
+      PIDS=$(#{Formula["coreutils"].opt_bin}/pgrep rbus_elements)
+      if [[ -z "$PIDS" ]]; then
+        exit 0
       fi
- 
-      # Send SIGTERM to rbus_elements
-      echo "Stopping rbus_elements (PID $PID)..."
-      kill -TERM "$PID"
- 
-      # Wait for process to exit (up to 10 seconds)
-      for i in {1..10}; do
-         if ! ps -p "$PID" > /dev/null; then
-            echo "rbus_elements stopped."
-            exit 0
-         fi
-         sleep 1
+      echo "Stopping rbus_elements (PIDs: $PIDS)..."
+      for PID in $PIDS; do
+        if ps -p "$PID" > /dev/null; then
+          kill -TERM "$PID"
+        fi
       done
- 
-      # If still running, try SIGKILL
+      TIMEOUT=${RBUS_STOP_TIMEOUT:-10}
+      for i in $(seq 1 $TIMEOUT); do
+        ALL_STOPPED=1
+        for PID in $PIDS; do
+          if ps -p "$PID" > /dev/null; then
+            ALL_STOPPED=0
+            break
+          fi
+        done
+        if [[ $ALL_STOPPED -eq 1 ]]; then
+          echo "rbus_elements stopped."
+          exit 0
+        fi
+        sleep 1
+      done
       echo "rbus_elements did not stop with SIGTERM, sending SIGKILL..."
-      kill -KILL "$PID" 2>/dev/null
+      for PID in $PIDS; do
+        if ps -p "$PID" > /dev/null; then
+          kill -KILL "$PID" 2>/dev/null
+        fi
+      done
+      sleep 1
+      for PID in $PIDS; do
+        if ps -p "$PID" > /dev/null; then
+          echo "Failed to stop rbus_elements (PID $PID)."
+          exit 1
+        fi
+      done
       echo "rbus_elements forcefully stopped."
-      exit 0
-     EOS
-     (bin/"rbus-elements-stop").write stop
-     (bin/"rbus-elements-stop").chmod 0755 
+    EOS
+    (bin/"rbus-elements-stop").write stop
+    (bin/"rbus-elements-stop").chmod 0755
+  end
 
-   end
- 
-   def caveats
-      <<~EOS
-       To start rbus:
-          #{opt_bin}/rbus-elements-start
-  
-       To stop rbus:
-          #{opt_bin}/rbus-elements-stop 
-      EOS
+  def caveats
+    <<~EOS
+      The rbus-elements configuration file is located at:
+        #{etc}/elements.json
+      Edit this file to customize the data model.
+
+      To start rbus-elements:
+        #{opt_bin}/rbus-elements-start
+      To stop rbus-elements:
+        #{opt_bin}/rbus-elements-stop
+
+      Before upgrading or uninstalling, ensure rbus_elements is stopped:
+        #{opt_bin}/rbus-elements-stop
+      If using the launchd service, unload it first:
+        launchctl unload ~/Library/LaunchAgents/#{plist_name}.plist
+
+      If you encounter issues with the stepherg/tap/rbus dependency, ensure the tap is installed:
+        brew tap stepherg/tap
+    EOS
+  end
+
+  def plist
+    <<~EOS
+      <?xml version="1.0" encoding="UTF-8"?>
+      <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+      <plist version="1.0">
+        <dict>
+          <key>Label</key>
+          <string>#{plist_name}</string>
+          <key>ProgramArguments</key>
+          <array>
+            <string>#{opt_bin}/rbus_elements</string>
+            <string>#{etc}/elements.json</string>
+          </array>
+          <key>RunAtLoad</key>
+          <true/>
+          <key>KeepAlive</key>
+          <true/>
+        </dict>
+      </plist>
+    EOS
+  end
+
+  test do
+    (testpath/"elements.json").write <<~EOS
+      [
+        {
+          "name": "Device.Test.Parameter",
+          "type": 0,
+          "value": "test"
+        }
+      ]
+    EOS
+    pid = fork do
+      exec "#{bin}/rbus_elements", "#{testpath}/elements.json"
     end
- 
-   test do
-     # Create a temporary JSON file for testing
-     (testpath/"elements.json").write <<~EOS
-       [
-         {
-           "name": "Device.Test.Parameter",
-           "type": 0,
-           "value": "test"
-         }
-       ]
-     EOS
- 
-     # Run the executable with the test JSON file
-     assert_match /Successfully registered/, shell_output("#{bin}/rbus_elements #{testpath}/elements.json 2>&1")
-   end
- end
+    sleep 1
+    assert_match /Successfully registered/, shell_output("ps aux | grep rbus_elements")
+    system "#{bin}/rbus-elements-start"
+    sleep 1
+    assert_match /rbus_elements/, shell_output("ps aux | grep rbus_elements")
+    system "#{bin}/rbus-elements-stop"
+    sleep 1
+    refute_match /rbus_elements/, shell_output("ps aux | grep rbus_elements")
+  ensure
+    Process.kill("TERM", pid) if pid
+    Process.wait(pid) if pid
+  end
+end
