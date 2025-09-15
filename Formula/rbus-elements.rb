@@ -15,7 +15,7 @@ class RbusElements < Formula
     system "cmake", "-S", ".", "-B", "build", *std_cmake_args
     system "cmake", "--build", "build"
     bin.install "build/rbus_elements"
-    etc.install "elements.json" => "elements.json.sample"
+    etc.install "elements.json"
   end
 
   service do
@@ -27,9 +27,6 @@ class RbusElements < Formula
 
   def caveats
     <<~EOS
-      A sample configuration file has been installed at:
-        #{etc}/elements.json.sample
-      Copy it to #{etc}/elements.json and edit as needed.
       Manage as a service:
         brew services start #{name.downcase}
     EOS

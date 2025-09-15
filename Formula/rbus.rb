@@ -32,10 +32,26 @@ class Rbus < Formula
       system "make"
       system "make", "install"
     end
+
+    # Wrapper to ensure stale UDS socket /tmp/rtrouted is removed when the
+    # service stops (e.g. via `brew services stop rbus`).
+    (libexec/"rtrouted-service").write <<~EOS
+      #!/usr/bin/env bash
+      set -euo pipefail
+      SOCKET="/tmp/rtrouted"
+      cleanup() {
+        if [ -S "$SOCKET" ]; then
+          rm -f "$SOCKET"
+        fi
+      }
+      trap cleanup EXIT INT TERM
+      exec "#{opt_bin}/rtrouted" "$@"
+    EOS
+    (libexec/"rtrouted-service").chmod 0755
   end
 
   service do
-    run [opt_bin/"rtrouted"]
+    run [opt_libexec/"rtrouted-service"]
     keep_alive true
     log_path var/"log/rtrouted.log"
     error_log_path var/"log/rtrouted.log"
@@ -48,6 +64,7 @@ class Rbus < Formula
         brew services start #{name.downcase}
       Or, if you don't want/need a background service you can run:
         #{opt_bin}/rtrouted
+      The service wrapper automatically removes /tmp/rtrouted on shutdown.
     EOS
   end
 
