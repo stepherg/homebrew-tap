@@ -2,6 +2,8 @@ class Rbus < Formula
   desc "RDK-Bus (RBUS) messaging framework"
   homepage "https://github.com/rdkcentral/rbus"
   url "https://github.com/stepherg/rbus/archive/47c405dc4aea747a7af1e568586420e8aa5510dd.tar.gz"
+  # Upstream commit snapshot; explicit version required for non-tag tarball
+  version "2.3.3" # adjust if upstream tag mismatch
   sha256 "413adc6d8e757e883285040c479e628348a6e371fb0611460f6b748c92b7d776"
   license "Apache-2.0"
   head "https://github.com/rdkcentral/rbus.git", branch: "main"
