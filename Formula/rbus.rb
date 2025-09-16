@@ -100,8 +100,13 @@ class Rbus < Formula
       fi
 
       TARGET_PID="${ADOPTED_PID:-$CHILD_PID}"
+      # If target still running, monitor it with a polling loop (it may not be our child after daemonization)
       if [ -n "$TARGET_PID" ]; then
-        wait "$TARGET_PID" || true
+        echo "[$(date -u +%FT%TZ)] supervising pid=$TARGET_PID" >> "$LOG"
+        while kill -0 "$TARGET_PID" 2>/dev/null; do
+          sleep 5
+        done
+        echo "[$(date -u +%FT%TZ)] observed pid $TARGET_PID exit" >> "$LOG"
       fi
       if [ -S "$SOCKET" ]; then
         rm -f "$SOCKET" || true
