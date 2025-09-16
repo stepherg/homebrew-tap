@@ -9,6 +9,7 @@ class RbusElements < Formula
 
   depends_on "cmake" => :build
   depends_on "cjson"
+  depends_on "jansson"
   depends_on "stepherg/tap/rbus"
 
   def install
