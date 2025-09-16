@@ -78,5 +78,8 @@ class Rbus < Formula
   ensure
     Process.kill("TERM", pid) if pid
     Process.wait(pid) if pid
+    uds = Pathname("/tmp/rtrouted")
+    uds.unlink if uds.exist?
+    refute_predicate uds, :exist?
   end
 end
