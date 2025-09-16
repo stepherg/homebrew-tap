@@ -18,11 +18,11 @@ class RbusElements < Formula
     system "cmake", "-S", ".", "-B", "build", *std_cmake_args
     system "cmake", "--build", "build"
     bin.install "build/rbus_elements"
-    etc.install "elements.json"
+    pkgshare.install "elements.json"
   end
 
   service do
-    run [opt_bin/"rbus_elements", etc/"elements.json"]
+    run [opt_bin/"rbus_elements", opt_pkgshare/"elements.json"]
     keep_alive true
     log_path var/"log/rbus_elements.log"
     error_log_path var/"log/rbus_elements.log"
@@ -30,20 +30,21 @@ class RbusElements < Formula
 
   def caveats
     <<~EOS
+      The bundled static model file is located at:
+        #{opt_pkgshare}/elements.json
+      It is not copied to etc/ because it is intended to remain unmodified; it will
+      be removed automatically if the formula is uninstalled.
+
       Manage as a service:
         brew services start #{name.downcase}
     EOS
   end
 
   test do
-    (testpath/"elements.json").write <<~EOS
-      [
-        { "name": "Device.Test.Parameter", "type": 0, "value": "test" }
-      ]
-    EOS
-    pid = fork { exec bin/"rbus_elements", testpath/"elements.json" }
+    # Use the distributed static file
+    assert_path_exists pkgshare/"elements.json"
+    pid = fork { exec bin/"rbus_elements", pkgshare/"elements.json" }
     sleep 2
-    assert_path_exists testpath/"elements.json"
     assert_match "rbus_elements", shell_output("ps -p #{pid} -o comm=")
   ensure
     Process.kill("TERM", pid) if pid
