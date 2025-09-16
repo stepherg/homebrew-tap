@@ -46,43 +46,27 @@ class Rbus < Formula
       echo "[$(date -u +%FT%TZ)] supervisor starting" >> "$LOG"
 
       start_child() {
-        # Run child in its own process group so we can signal the group
-        ( exec "#{opt_bin}/rtrouted" "$@" ) &
+        "#{opt_bin}/rtrouted" "$@" &
         CHILD_PID=$!
-        echo "[$(date -u +%FT%TZ)] started rtrouted pid=$CHILD_PID" >> "$LOG"
+        echo "[$(date -u +%FT%TZ)] forked initial rtrouted pid=$CHILD_PID" >> "$LOG"
       }
 
       shutdown() {
-        if [ -n "$CHILD_PID" ] && kill -0 "$CHILD_PID" 2>/dev/null; then
-          echo "[$(date -u +%FT%TZ)] sending SIGTERM to $CHILD_PID" >> "$LOG"
-          # Send to process group (-PID) so any forked children exit too
-            kill -TERM -$CHILD_PID 2>/dev/null || kill -TERM "$CHILD_PID" 2>/dev/null || true
-          # Wait up to 5s
+        TARGET_PID="${ADOPTED_PID:-$CHILD_PID}"
+        if [ -n "${TARGET_PID}" ] && kill -0 "$TARGET_PID" 2>/dev/null; then
+          echo "[$(date -u +%FT%TZ)] sending SIGTERM to $TARGET_PID" >> "$LOG"
+          kill -TERM "$TARGET_PID" 2>/dev/null || true
           for i in 1 2 3 4 5; do
-            if ! kill -0 "$CHILD_PID" 2>/dev/null; then
+            if ! kill -0 "$TARGET_PID" 2>/dev/null; then
               break
             fi
             sleep 1
           done
-          if kill -0 "$CHILD_PID" 2>/dev/null; then
-            echo "[$(date -u +%FT%TZ)] escalating SIGKILL to $CHILD_PID" >> "$LOG"
-            kill -KILL -$CHILD_PID 2>/dev/null || kill -KILL "$CHILD_PID" 2>/dev/null || true
+          if kill -0 "$TARGET_PID" 2>/dev/null; then
+            echo "[$(date -u +%FT%TZ)] escalating SIGKILL to $TARGET_PID" >> "$LOG"
+            kill -KILL "$TARGET_PID" 2>/dev/null || true
           fi
         fi
-        # Catch any stray rtrouted processes owned by this user referencing the same socket
-        for PID in $(/usr/bin/pgrep -x rtrouted || true); do
-          if [ "$PID" != "$CHILD_PID" ]; then
-            echo "[$(date -u +%FT%TZ)] terminating stray rtrouted pid=$PID" >> "$LOG"
-            kill -TERM "$PID" 2>/dev/null || true
-          fi
-        done
-        sleep 1
-        for PID in $(/usr/bin/pgrep -x rtrouted || true); do
-          if kill -0 "$PID" 2>/dev/null; then
-            echo "[$(date -u +%FT%TZ)] force killing lingering rtrouted pid=$PID" >> "$LOG"
-            kill -KILL "$PID" 2>/dev/null || true
-          fi
-        done
         if [ -S "$SOCKET" ]; then
           rm -f "$SOCKET" || true
           echo "[$(date -u +%FT%TZ)] removed socket $SOCKET" >> "$LOG"
@@ -93,8 +77,32 @@ class Rbus < Formula
 
       trap shutdown INT TERM EXIT
       start_child "$@"
-      wait "$CHILD_PID" || true
-      # Ensure cleanup if child exited naturally (not via trap)
+
+      # Give daemon a moment to potentially double-fork & create socket
+      sleep 1
+      if [ ! -S "$SOCKET" ]; then
+        # Wait a little longer if not ready yet
+        for i in 1 2 3 4; do
+          sleep 0.5
+          [ -S "$SOCKET" ] && break
+        done
+      fi
+
+      # If the original child exited but another rtrouted is running with socket, adopt it
+      if ! kill -0 "$CHILD_PID" 2>/dev/null; then
+        for PID in $(/usr/bin/pgrep -x rtrouted || true); do
+          if [ -S "$SOCKET" ]; then
+            ADOPTED_PID=$PID
+            echo "[$(date -u +%FT%TZ)] adopted daemon pid=$ADOPTED_PID" >> "$LOG"
+            break
+          fi
+        done
+      fi
+
+      TARGET_PID="${ADOPTED_PID:-$CHILD_PID}"
+      if [ -n "$TARGET_PID" ]; then
+        wait "$TARGET_PID" || true
+      fi
       if [ -S "$SOCKET" ]; then
         rm -f "$SOCKET" || true
         echo "[$(date -u +%FT%TZ)] removed socket $SOCKET after natural exit" >> "$LOG"
