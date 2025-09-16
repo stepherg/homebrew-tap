@@ -40,15 +40,23 @@ class Rbus < Formula
       set -euo pipefail
       SOCKET="/tmp/rtrouted"
       CHILD_PID=""
+      LOG="#{var}/log/rtrouted-supervisor.log"
+
+      mkdir -p "#{var}/log"
+      echo "[$(date -u +%FT%TZ)] supervisor starting" >> "$LOG"
 
       start_child() {
-        "#{opt_bin}/rtrouted" "$@" &
+        # Run child in its own process group so we can signal the group
+        ( exec "#{opt_bin}/rtrouted" "$@" ) &
         CHILD_PID=$!
+        echo "[$(date -u +%FT%TZ)] started rtrouted pid=$CHILD_PID" >> "$LOG"
       }
 
       shutdown() {
         if [ -n "$CHILD_PID" ] && kill -0 "$CHILD_PID" 2>/dev/null; then
-          kill -TERM "$CHILD_PID" 2>/dev/null || true
+          echo "[$(date -u +%FT%TZ)] sending SIGTERM to $CHILD_PID" >> "$LOG"
+          # Send to process group (-PID) so any forked children exit too
+            kill -TERM -$CHILD_PID 2>/dev/null || kill -TERM "$CHILD_PID" 2>/dev/null || true
           # Wait up to 5s
           for i in 1 2 3 4 5; do
             if ! kill -0 "$CHILD_PID" 2>/dev/null; then
@@ -57,20 +65,40 @@ class Rbus < Formula
             sleep 1
           done
           if kill -0 "$CHILD_PID" 2>/dev/null; then
-            kill -KILL "$CHILD_PID" 2>/dev/null || true
+            echo "[$(date -u +%FT%TZ)] escalating SIGKILL to $CHILD_PID" >> "$LOG"
+            kill -KILL -$CHILD_PID 2>/dev/null || kill -KILL "$CHILD_PID" 2>/dev/null || true
           fi
         fi
+        # Catch any stray rtrouted processes owned by this user referencing the same socket
+        for PID in $(/usr/bin/pgrep -x rtrouted || true); do
+          if [ "$PID" != "$CHILD_PID" ]; then
+            echo "[$(date -u +%FT%TZ)] terminating stray rtrouted pid=$PID" >> "$LOG"
+            kill -TERM "$PID" 2>/dev/null || true
+          fi
+        done
+        sleep 1
+        for PID in $(/usr/bin/pgrep -x rtrouted || true); do
+          if kill -0 "$PID" 2>/dev/null; then
+            echo "[$(date -u +%FT%TZ)] force killing lingering rtrouted pid=$PID" >> "$LOG"
+            kill -KILL "$PID" 2>/dev/null || true
+          fi
+        done
         if [ -S "$SOCKET" ]; then
           rm -f "$SOCKET" || true
+          echo "[$(date -u +%FT%TZ)] removed socket $SOCKET" >> "$LOG"
         fi
+        echo "[$(date -u +%FT%TZ)] supervisor exiting" >> "$LOG"
         exit 0
       }
 
       trap shutdown INT TERM EXIT
       start_child "$@"
-      wait "$CHILD_PID"
-      # Ensure cleanup if child exited naturally
-      [ -S "$SOCKET" ] && rm -f "$SOCKET" || true
+      wait "$CHILD_PID" || true
+      # Ensure cleanup if child exited naturally (not via trap)
+      if [ -S "$SOCKET" ]; then
+        rm -f "$SOCKET" || true
+        echo "[$(date -u +%FT%TZ)] removed socket $SOCKET after natural exit" >> "$LOG"
+      fi
     EOS
     (libexec/"rtrouted-service").chmod 0755
   end
