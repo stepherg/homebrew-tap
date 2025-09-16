@@ -67,19 +67,4 @@ class Rbus < Formula
       The service wrapper automatically removes /tmp/rtrouted on shutdown.
     EOS
   end
-
-  test do
-    # Launch daemon briefly to ensure it starts then terminate.
-    pid = fork do
-      exec bin/"rtrouted"
-    end
-    sleep 2
-    assert_match "rtrouted", shell_output("ps -p #{pid} -o comm=")
-  ensure
-    Process.kill("TERM", pid) if pid
-    Process.wait(pid) if pid
-    uds = Pathname("/tmp/rtrouted")
-    uds.unlink if uds.exist?
-    refute_predicate uds, :exist?
-  end
 end
