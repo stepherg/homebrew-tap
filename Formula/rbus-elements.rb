@@ -1,9 +1,11 @@
 class RbusElements < Formula
   desc "RBUS-based data model management for device information"
   homepage "https://github.com/stepherg/rbus-elements"
-  url "https://github.com/stepherg/rbus-elements/archive/refs/tags/v0.0.5.tar.gz"
-  version "0.0.5"
-  sha256 "5752637c11463c3a920332a71ca384b4f21634932a273e78bd112f2444b19431"
+  url "https://github.com/stepherg/rbus-elements/archive/refs/tags/v0.0.6.tar.gz"
+  version "0.0.6"
+  # curl -L -o rbus-elements.tar.gz https://github.com/stepherg/rbus-elements/archive/refs/tags/v0.0.6.tar.gz
+  # shasum -a 256 rbus-elements.tar.gz
+  sha256 "34e90ff50a8a089983dc002bbcf3369aa272cb9d24789d7eddb517cf1c6a941d"
   license "Apache-2.0"
   head "https://github.com/stepherg/rbus-elements.git", branch: "main"
 
