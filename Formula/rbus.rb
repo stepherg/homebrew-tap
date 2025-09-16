@@ -39,20 +39,45 @@ class Rbus < Formula
       #!/usr/bin/env bash
       set -euo pipefail
       SOCKET="/tmp/rtrouted"
-      cleanup() {
-        if [ -S "$SOCKET" ]; then
-          rm -f "$SOCKET"
-        fi
+      CHILD_PID=""
+
+      start_child() {
+        "#{opt_bin}/rtrouted" "$@" &
+        CHILD_PID=$!
       }
-      trap cleanup EXIT INT TERM
-      exec "#{opt_bin}/rtrouted" "$@"
+
+      shutdown() {
+        if [ -n "$CHILD_PID" ] && kill -0 "$CHILD_PID" 2>/dev/null; then
+          kill -TERM "$CHILD_PID" 2>/dev/null || true
+          # Wait up to 5s
+          for i in 1 2 3 4 5; do
+            if ! kill -0 "$CHILD_PID" 2>/dev/null; then
+              break
+            fi
+            sleep 1
+          done
+          if kill -0 "$CHILD_PID" 2>/dev/null; then
+            kill -KILL "$CHILD_PID" 2>/dev/null || true
+          fi
+        fi
+        if [ -S "$SOCKET" ]; then
+          rm -f "$SOCKET" || true
+        fi
+        exit 0
+      }
+
+      trap shutdown INT TERM EXIT
+      start_child "$@"
+      wait "$CHILD_PID"
+      # Ensure cleanup if child exited naturally
+      [ -S "$SOCKET" ] && rm -f "$SOCKET" || true
     EOS
     (libexec/"rtrouted-service").chmod 0755
   end
 
   service do
     run [opt_libexec/"rtrouted-service"]
-    keep_alive true
+    # not using keep_alive so that stop actually terminates the process
     log_path var/"log/rtrouted.log"
     error_log_path var/"log/rtrouted.log"
   end
