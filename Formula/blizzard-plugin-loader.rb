@@ -11,14 +11,9 @@ class BlizzardPluginLoader < Formula
   # Build dependencies
   depends_on "cmake" => :build
   depends_on "pkg-config" => :build
-
-  # Runtime / link dependencies (assumes these formulae exist or are provided externally)
-  # You may need to create formulas for BlizzardSDK, protobuf (already in core), abseil, and grpc
   depends_on "grpc" # provides grpc++ via pkg-config
   depends_on "abseil" # Homebrew core has abseil
   depends_on "protobuf"
-  # BlizzardSDK is not a known core formula; adjust to your tap or resource if needed.
-  # depends_on "stepherg/tap/blizzard-sdk"
 
   def install
     args = [
