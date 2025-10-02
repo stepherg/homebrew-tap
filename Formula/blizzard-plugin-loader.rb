@@ -44,7 +44,7 @@ class BlizzardPluginLoader < Formula
         #{opt_lib}/blizzard/plugins
       Provide a Blizzard server endpoint via --endpoint or BLIZZARD_ENDPOINT env var.
       Example:
-  blizzard-plugin-loader #{opt_lib}/blizzard/plugins --endpoint localhost:50051
+        blizzard-plugin-loader #{opt_lib}/blizzard/plugins --endpoint localhost:50051
         To run as a background service (auto-restarts at login):
         brew services start #{name.downcase}
       Logs:
