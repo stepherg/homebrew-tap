@@ -11,8 +11,8 @@ class BlizzardPluginLoader < Formula
   # Build dependencies
   depends_on "cmake" => :build
   depends_on "pkg-config" => :build
-  depends_on "grpc" # provides grpc++ via pkg-config
   depends_on "abseil" # Homebrew core has abseil
+  depends_on "grpc" # provides grpc++ via pkg-config
   depends_on "protobuf"
 
   def install
