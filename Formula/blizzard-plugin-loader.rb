@@ -34,8 +34,8 @@ class BlizzardPluginLoader < Formula
   end
 
   service do
-    # Allow endpoint override through environment or defaults
-    run [opt_bin/"blizzard-plugin-loader", lib/"blizzard/plugins", "--endpoint", (ENV["BLIZZARD_ENDPOINT"] || "localhost:50051")]
+    # Use opt_lib so the symlinked Cellar path resolves correctly after upgrades.
+    run [opt_bin/"blizzard-plugin-loader", opt_lib/"blizzard/plugins", "--endpoint", "localhost:50051"]
     keep_alive true
     working_dir var
     log_path var/"log/blizzard-plugin-loader.log"
@@ -46,10 +46,10 @@ class BlizzardPluginLoader < Formula
   def caveats
     <<~EOS
       Plugins will be loaded from:
-        #{lib}/blizzard/plugins
+        #{opt_lib}/blizzard/plugins
       Provide a Blizzard server endpoint via --endpoint or BLIZZARD_ENDPOINT env var.
       Example:
-        blizzard-plugin-loader #{lib}/blizzard/plugins --endpoint localhost:50051
+  blizzard-plugin-loader #{opt_lib}/blizzard/plugins --endpoint localhost:50051
         To run as a background service (auto-restarts at login):
         brew services start #{name.downcase}
       Logs:
